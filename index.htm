@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saldo Mágico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 90%;
+            width: 400px;
+        }
+        .card {
+            background-color: #fff;
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn {
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            transition: background-color 0.3s ease;
+        }
+        .message-box {
+            display: none;
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: fadeInOut 3s forwards;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -20px); }
+            10% { opacity: 1; transform: translate(-50%, 0); }
+            90% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -20px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
+    <div id="message-container" class="message-box"></div>
+    <div class="max-w-xl w-full">
+        <!-- Título principal y saldo general -->
+        <header class="text-center mb-4">
+            <h1 class="text-4xl font-bold text-gray-800">Saldo Mágico</h1>
+            <div class="mt-4 p-4 card">
+                <p class="text-lg text-gray-500 font-semibold">Saldo General</p>
+                <p id="general-balance" class="text-5xl font-extrabold mt-1 text-green-600">B/.0.00</p>
+            </div>
+        </header>
+
+        <!-- Botones principales (más pequeños) -->
+        <div class="flex flex-wrap justify-center items-center space-x-2 space-y-2 sm:space-y-0 sm:space-x-4 mb-4">
+            <button id="add-client-btn" class="bg-blue-500 text-white hover:bg-blue-600 rounded-full px-3 py-1 text-sm">
+                Agregar Cliente
+            </button>
+            <button id="toggle-clients-btn" class="bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-full px-3 py-1 text-sm">
+                Mostrar Clientes
+            </button>
+            <button id="download-btn" class="bg-purple-500 text-white hover:bg-purple-600 flex items-center justify-center rounded-full px-3 py-1 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                Descargar
+            </button>
+            <button id="restore-btn" class="bg-teal-500 text-white hover:bg-teal-600 flex items-center justify-center rounded-full px-3 py-1 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0114 0v-2.1A1 1 0 0120 4a1 1 0 01-1 1h-1a1 1 0 010-2h1a1 1 0 001-1V3a1 1 0 00-1-1h-2a1 1 0 00-1 1v1h-1a1 1 0 01-1-1v-1h-1a1 1 0 01-1-1v-1a1 1 0 01-1-1zM2 9a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9zm2 0h12v8H4V9z" clip-rule="evenodd" />
+                </svg>
+                Restaurar
+            </button>
+        </div>
+
+        <!-- Contenedor de clientes (inicialmente oculto) -->
+        <div id="clients-container" class="space-y-4 hidden">
+            <!-- La lista de clientes se renderizará aquí -->
+        </div>
+
+        <!-- Modales para formularios -->
+
+        <!-- Modal para agregar cliente -->
+        <div id="add-client-modal" class="modal">
+            <div class="modal-content">
+                <h2 class="text-2xl font-bold mb-4 text-center">Nuevo Cliente</h2>
+                <input type="text" id="client-name-input" placeholder="Nombre del cliente" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+                <div class="flex space-x-4">
+                    <button id="save-client-btn" class="w-1/2 btn bg-blue-500 text-white hover:bg-blue-600">Guardar</button>
+                    <button id="cancel-client-btn" class="w-1/2 btn bg-gray-200 text-gray-700 hover:bg-gray-300">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para agregar trabajo -->
+        <div id="add-job-modal" class="modal">
+            <div class="modal-content">
+                <h2 class="text-2xl font-bold mb-4 text-center">Nuevo Trabajo</h2>
+                <input type="text" id="job-name-input" placeholder="Nombre del trabajo" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+                <input type="number" id="job-cost-input" placeholder="Costo (B/.)" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+                <input type="date" id="job-date-input" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+                <div class="flex space-x-4">
+                    <button id="save-job-btn" class="w-1/2 btn bg-blue-500 text-white hover:bg-blue-600">Guardar</button>
+                    <button id="cancel-job-btn" class="w-1/2 btn bg-gray-200 text-gray-700 hover:bg-gray-300">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para registrar abono -->
+        <div id="add-payment-modal" class="modal">
+            <div class="modal-content">
+                <h2 class="text-2xl font-bold mb-4 text-center">Registrar Abono</h2>
+                <p id="payment-client-name" class="text-center font-bold mb-2"></p>
+                <input type="number" id="payment-amount-input" placeholder="Cantidad abonada (B/.)" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+                <div class="flex space-x-4">
+                    <button id="save-payment-btn" class="w-1/2 btn bg-blue-500 text-white hover:bg-blue-600">Guardar</button>
+                    <button id="cancel-payment-btn" class="w-1/2 btn bg-gray-200 text-gray-700 hover:bg-gray-300">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para restaurar historial -->
+        <div id="restore-modal" class="modal">
+            <div class="modal-content">
+                <h2 class="text-2xl font-bold mb-4 text-center">Restaurar Historial</h2>
+                <p class="text-sm text-gray-600 mb-4 text-center">Selecciona el archivo de respaldo (.json) que descargaste previamente.</p>
+                <input type="file" id="restore-file-input" accept=".json" class="w-full mb-4">
+                <div class="flex space-x-4">
+                    <button id="load-file-btn" class="w-1/2 btn bg-teal-500 text-white hover:bg-teal-600">Cargar</button>
+                    <button id="cancel-restore-btn" class="w-1/2 btn bg-gray-200 text-gray-700 hover:bg-gray-300">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const clientDataKey = 'saldoMagicoClientData';
+            const generalBalanceEl = document.getElementById('general-balance');
+            const clientsContainerEl = document.getElementById('clients-container');
+            const toggleClientsBtn = document.getElementById('toggle-clients-btn');
+            const addClientBtn = document.getElementById('add-client-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const restoreBtn = document.getElementById('restore-btn');
+            const messageContainer = document.getElementById('message-container');
+
+            // Modales
+            const addClientModal = document.getElementById('add-client-modal');
+            const addJobModal = document.getElementById('add-job-modal');
+            const addPaymentModal = document.getElementById('add-payment-modal');
+            const restoreModal = document.getElementById('restore-modal');
+
+            // Entradas de los modales
+            const clientNameInput = document.getElementById('client-name-input');
+            const jobNameInput = document.getElementById('job-name-input');
+            const jobCostInput = document.getElementById('job-cost-input');
+            const jobDateInput = document.getElementById('job-date-input');
+            const paymentClientName = document.getElementById('payment-client-name');
+            const paymentAmountInput = document.getElementById('payment-amount-input');
+            const restoreFileInput = document.getElementById('restore-file-input');
+
+            // Botones de los modales
+            const saveClientBtn = document.getElementById('save-client-btn');
+            const cancelClientBtn = document.getElementById('cancel-client-btn');
+            const saveJobBtn = document.getElementById('save-job-btn');
+            const cancelJobBtn = document.getElementById('cancel-job-btn');
+            const savePaymentBtn = document.getElementById('save-payment-btn');
+            const cancelPaymentBtn = document.getElementById('cancel-payment-btn');
+            const loadFileBtn = document.getElementById('load-file-btn');
+            const cancelRestoreBtn = document.getElementById('cancel-restore-btn');
+
+            let clientData = JSON.parse(localStorage.getItem(clientDataKey)) || [];
+            let currentClientId = null;
+
+            // Funciones de utilidad
+            const showMessage = (text, type = 'success') => {
+                messageContainer.textContent = text;
+                messageContainer.style.display = 'block';
+                messageContainer.style.backgroundColor = type === 'success' ? '#4CAF50' : '#f44336';
+                setTimeout(() => {
+                    messageContainer.style.display = 'none';
+                }, 3000);
+            };
+            
+            // Función para copiar texto al portapapeles
+            const copyToClipboard = (text) => {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    showMessage('Texto copiado al portapapeles.');
+                } catch (err) {
+                    console.error('Error al copiar el texto:', err);
+                    showMessage('No se pudo copiar el texto.', 'error');
+                }
+                document.body.removeChild(textarea);
+            };
+
+            const saveClientData = () => {
+                localStorage.setItem(clientDataKey, JSON.stringify(clientData));
+                renderClients();
+                updateGeneralBalance();
+            };
+
+            const updateGeneralBalance = () => {
+                const totalBalance = clientData.reduce((sum, client) => {
+                    const totalJobCost = client.jobs.reduce((jobSum, job) => jobSum + parseFloat(job.cost), 0);
+                    const totalPaid = client.payments.reduce((paySum, payment) => paySum + parseFloat(payment.amount), 0);
+                    return sum + totalJobCost - totalPaid;
+                }, 0);
+                generalBalanceEl.textContent = `B/.${totalBalance.toFixed(2)}`;
+                generalBalanceEl.classList.remove('text-green-600', 'text-red-600', 'text-gray-600');
+                if (totalBalance > 0) {
+                    generalBalanceEl.classList.add('text-green-600');
+                } else if (totalBalance < 0) {
+                    generalBalanceEl.classList.add('text-red-600');
+                } else {
+                    generalBalanceEl.classList.add('text-gray-600');
+                }
+            };
+
+            const showModal = (modal) => {
+                modal.style.display = 'flex';
+            };
+
+            const hideModal = (modal) => {
+                modal.style.display = 'none';
+            };
+
+            // Renderizar la lista de clientes
+            const renderClients = () => {
+                clientsContainerEl.innerHTML = '';
+                clientData.forEach(client => {
+                    const clientTotalCost = client.jobs.reduce((sum, job) => sum + parseFloat(job.cost), 0);
+                    const clientTotalPaid = client.payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+                    const clientBalance = clientTotalCost - clientTotalPaid;
+
+                    const clientCard = document.createElement('div');
+                    clientCard.className = 'card p-4 mb-4';
+                    clientCard.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <h2 class="text-xl font-bold">${client.name}</h2>
+                            <div class="flex space-x-2">
+                                <button class="add-job-btn bg-green-500 text-white rounded-full px-3 py-1 text-sm hover:bg-green-600" data-id="${client.id}">+ Trabajo</button>
+                                <button class="add-payment-btn bg-yellow-500 text-white rounded-full px-3 py-1 text-sm hover:bg-yellow-600" data-client-id="${client.id}">+ Abono</button>
+                                <button class="share-btn bg-blue-500 text-white rounded-full px-3 py-1 text-sm hover:bg-blue-600" data-client-id="${client.id}">Compartir</button>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-2">Saldo total: <span class="font-bold ${clientBalance > 0 ? 'text-red-500' : 'text-green-500'}">B/.${clientBalance.toFixed(2)}</span></p>
+                        <hr class="my-2 border-gray-300">
+                        <div class="text-sm text-gray-700">
+                            <h3 class="font-semibold mb-1">Historial de Trabajos</h3>
+                            <ul class="job-list space-y-1">
+                                <!-- Los trabajos se renderizarán aquí -->
+                            </ul>
+                            <h3 class="font-semibold mt-2 mb-1">Historial de Abonos</h3>
+                            <ul class="payment-list space-y-1">
+                                <!-- Los abonos se renderizarán aquí -->
+                            </ul>
+                        </div>
+                    `;
+                    const jobListEl = clientCard.querySelector('.job-list');
+                    client.jobs.forEach(job => {
+                        const jobItem = document.createElement('li');
+                        jobItem.className = 'p-1 rounded-xl flex justify-between items-center text-sm bg-green-100';
+                        jobItem.innerHTML = `
+                            <p class="font-medium">${job.name}</p>
+                            <p class="text-gray-600">B/.${parseFloat(job.cost).toFixed(2)}</p>
+                            <div class="flex space-x-2 items-center">
+                                <p class="text-gray-500">${job.date}</p>
+                                <button class="delete-job-btn text-red-500 hover:text-red-700 text-xs font-bold" data-client-id="${client.id}" data-job-id="${job.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        `;
+                        jobListEl.appendChild(jobItem);
+                    });
+
+                    const paymentListEl = clientCard.querySelector('.payment-list');
+                    client.payments.forEach(payment => {
+                        const paymentItem = document.createElement('li');
+                        paymentItem.className = 'p-1 rounded-xl flex justify-between items-center text-sm bg-blue-100';
+                        paymentItem.innerHTML = `
+                            <p class="font-medium">Abono</p>
+                            <p class="text-gray-600">B/.${parseFloat(payment.amount).toFixed(2)}</p>
+                            <div class="flex space-x-2 items-center">
+                                <p class="text-gray-500">${payment.date}</p>
+                            </div>
+                        `;
+                        paymentListEl.appendChild(paymentItem);
+                    });
+                    clientsContainerEl.appendChild(clientCard);
+                });
+            };
+
+            // Manejadores de eventos de los clientes y trabajos
+            clientsContainerEl.addEventListener('click', (e) => {
+                // Agregar trabajo
+                if (e.target.classList.contains('add-job-btn')) {
+                    currentClientId = e.target.dataset.id;
+                    jobNameInput.value = '';
+                    jobCostInput.value = '';
+                    jobDateInput.value = new Date().toISOString().slice(0, 10);
+                    showModal(addJobModal);
+                }
+                // Registrar abono
+                if (e.target.classList.contains('add-payment-btn')) {
+                    currentClientId = e.target.dataset.clientId;
+                    const client = clientData.find(c => c.id === currentClientId);
+                    paymentClientName.textContent = `Abono para: ${client.name}`;
+                    paymentAmountInput.value = '';
+                    showModal(addPaymentModal);
+                }
+                // Eliminar trabajo
+                if (e.target.classList.contains('delete-job-btn')) {
+                    const clientId = e.target.dataset.clientId;
+                    const jobId = e.target.dataset.jobId;
+                    const clientIndex = clientData.findIndex(c => c.id === clientId);
+                    if (clientIndex !== -1) {
+                         const jobIndex = clientData[clientIndex].jobs.findIndex(j => j.id === jobId);
+                         if (jobIndex !== -1) {
+                            clientData[clientIndex].jobs.splice(jobIndex, 1);
+                            saveClientData();
+                            showMessage('Trabajo eliminado.');
+                         }
+                    }
+                }
+                // Compartir
+                if (e.target.classList.contains('share-btn')) {
+                    const clientId = e.target.dataset.clientId;
+                    const client = clientData.find(c => c.id === clientId);
+
+                    const totalJobCost = client.jobs.reduce((sum, job) => sum + parseFloat(job.cost), 0);
+                    const totalPaid = client.payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+                    const clientBalance = totalJobCost - totalPaid;
+
+                    let message = `Historial de ${client.name}\n\n`;
+
+                    message += `*Trabajos:*\n`;
+                    client.jobs.forEach(job => {
+                        message += `- ${job.name}: B/.${parseFloat(job.cost).toFixed(2)} el ${job.date}\n`;
+                    });
+
+                    message += `\n*Abonos:*\n`;
+                    if (client.payments.length > 0) {
+                        client.payments.forEach(payment => {
+                            message += `- Abono de B/.${parseFloat(payment.amount).toFixed(2)} el ${payment.date}\n`;
+                        });
+                    } else {
+                        message += `- Sin abonos registrados.\n`;
+                    }
+                    
+                    message += `\n*Resumen:*\n`;
+                    message += `- Total de Trabajos: B/.${totalJobCost.toFixed(2)}\n`;
+                    message += `- Total Abonado: B/.${totalPaid.toFixed(2)}\n`;
+                    message += `- Saldo Pendiente: B/.${clientBalance.toFixed(2)}\n`;
+
+                    if (navigator.share) {
+                        navigator.share({
+                            title: `Historial de ${client.name}`,
+                            text: message,
+                        }).then(() => {
+                            showMessage('Contenido compartido con éxito.');
+                        }).catch(error => {
+                            console.warn('Share API failed, falling back to clipboard copy:', error);
+                            copyToClipboard(message);
+                        });
+                    } else {
+                        copyToClipboard(message);
+                    }
+                }
+            });
+
+            // Manejadores de botones de modales
+            saveClientBtn.addEventListener('click', () => {
+                const name = clientNameInput.value.trim();
+                if (name) {
+                    clientData.push({
+                        id: Date.now().toString(),
+                        name: name,
+                        jobs: [],
+                        payments: []
+                    });
+                    saveClientData();
+                    hideModal(addClientModal);
+                    showMessage('Cliente agregado.');
+                }
+            });
+
+            cancelClientBtn.addEventListener('click', () => {
+                hideModal(addClientModal);
+            });
+
+            saveJobBtn.addEventListener('click', () => {
+                const name = jobNameInput.value.trim();
+                const cost = parseFloat(jobCostInput.value);
+                const date = jobDateInput.value;
+                if (name && !isNaN(cost) && cost > 0 && date) {
+                    const client = clientData.find(c => c.id === currentClientId);
+                    client.jobs.push({
+                        id: Date.now().toString(),
+                        name: name,
+                        cost: cost,
+                        date: date
+                    });
+                    saveClientData();
+                    hideModal(addJobModal);
+                    showMessage('Trabajo agregado.');
+                }
+            });
+
+            cancelJobBtn.addEventListener('click', () => {
+                hideModal(addJobModal);
+            });
+
+            savePaymentBtn.addEventListener('click', () => {
+                const amount = parseFloat(paymentAmountInput.value);
+                if (!isNaN(amount) && amount > 0) {
+                    const client = clientData.find(c => c.id === currentClientId);
+                    client.payments.push({
+                        amount: amount,
+                        date: new Date().toISOString().slice(0, 10)
+                    });
+                    saveClientData();
+                    hideModal(addPaymentModal);
+                    showMessage('Abono registrado.');
+                }
+            });
+
+            cancelPaymentBtn.addEventListener('click', () => {
+                hideModal(addPaymentModal);
+            });
+            
+            loadFileBtn.addEventListener('click', () => {
+                const file = restoreFileInput.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const restoredData = JSON.parse(e.target.result);
+                            if (Array.isArray(restoredData) && restoredData.every(c => c.name && c.jobs)) {
+                                clientData = restoredData;
+                                saveClientData();
+                                hideModal(restoreModal);
+                                showMessage('Historial restaurado.');
+                            } else {
+                                showMessage('Formato de archivo incorrecto.', 'error');
+                            }
+                        } catch (error) {
+                            showMessage('Error al leer el archivo. Asegúrate de que es un archivo JSON válido.', 'error');
+                            console.error('Error al restaurar:', error);
+                        }
+                    };
+                    reader.readAsText(file);
+                } else {
+                    showMessage('Por favor, selecciona un archivo.', 'error');
+                }
+            });
+
+            cancelRestoreBtn.addEventListener('click', () => {
+                hideModal(restoreModal);
+            });
+
+            // Manejadores de los botones principales
+            addClientBtn.addEventListener('click', () => {
+                clientNameInput.value = '';
+                showModal(addClientModal);
+            });
+
+            toggleClientsBtn.addEventListener('click', () => {
+                const isHidden = clientsContainerEl.classList.toggle('hidden');
+                toggleClientsBtn.textContent = isHidden ? 'Mostrar Clientes' : 'Ocultar Clientes';
+            });
+
+            downloadBtn.addEventListener('click', () => {
+                const jsonData = JSON.stringify(clientData, null, 2);
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'saldo_magico_backup.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showMessage('Copia de seguridad descargada.');
+            });
+
+            restoreBtn.addEventListener('click', () => {
+                restoreFileInput.value = null;
+                showModal(restoreModal);
+            });
+
+
+            // Inicialización
+            renderClients();
+            updateGeneralBalance();
+        });
+    </script>
+</body>
+</html>
