@@ -63,6 +63,10 @@
             100% { opacity: 0; transform: translate(-50%, -20px); }
         }
     </style>
+    <!-- Las rutas de los íconos han sido actualizadas -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" href="/favicon.ico" sizes="any">
 </head>
 <body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
     <div id="message-container" class="message-box"></div>
@@ -159,23 +163,35 @@
     </div>
 
     <script>
+        // Registrar el Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('Service Worker registrado con éxito:', registration.scope);
+                }).catch(error => {
+                    console.log('Error en el registro del Service Worker:', error);
+                });
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            const clientDataKey = 'saldoMagicoClientData';
+            // Variables de almacenamiento
+            const clientDataKey = 'magicBalance_clientData';
+            let clientData = JSON.parse(localStorage.getItem(clientDataKey)) || [];
+
+            // Elementos DOM
             const generalBalanceEl = document.getElementById('general-balance');
             const clientsContainerEl = document.getElementById('clients-container');
             const toggleClientsBtn = document.getElementById('toggle-clients-btn');
             const addClientBtn = document.getElementById('add-client-btn');
             const downloadBtn = document.getElementById('download-btn');
             const restoreBtn = document.getElementById('restore-btn');
-            const messageContainer = document.getElementById('message-container');
 
-            // Modales
+            // Modales y entradas
             const addClientModal = document.getElementById('add-client-modal');
             const addJobModal = document.getElementById('add-job-modal');
             const addPaymentModal = document.getElementById('add-payment-modal');
             const restoreModal = document.getElementById('restore-modal');
-
-            // Entradas de los modales
             const clientNameInput = document.getElementById('client-name-input');
             const jobNameInput = document.getElementById('job-name-input');
             const jobCostInput = document.getElementById('job-cost-input');
@@ -194,11 +210,11 @@
             const loadFileBtn = document.getElementById('load-file-btn');
             const cancelRestoreBtn = document.getElementById('cancel-restore-btn');
 
-            let clientData = JSON.parse(localStorage.getItem(clientDataKey)) || [];
             let currentClientId = null;
 
-            // Funciones de utilidad
+            // Mostrar un mensaje al usuario
             const showMessage = (text, type = 'success') => {
+                const messageContainer = document.getElementById('message-container');
                 messageContainer.textContent = text;
                 messageContainer.style.display = 'block';
                 messageContainer.style.backgroundColor = type === 'success' ? '#4CAF50' : '#f44336';
@@ -206,8 +222,7 @@
                     messageContainer.style.display = 'none';
                 }, 3000);
             };
-            
-            // Función para copiar texto al portapapeles
+
             const copyToClipboard = (text) => {
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
@@ -221,12 +236,6 @@
                     showMessage('No se pudo copiar el texto.', 'error');
                 }
                 document.body.removeChild(textarea);
-            };
-
-            const saveClientData = () => {
-                localStorage.setItem(clientDataKey, JSON.stringify(clientData));
-                renderClients();
-                updateGeneralBalance();
             };
 
             const updateGeneralBalance = () => {
@@ -246,6 +255,12 @@
                 }
             };
 
+            const saveClientData = () => {
+                localStorage.setItem(clientDataKey, JSON.stringify(clientData));
+                renderClients();
+                updateGeneralBalance();
+            };
+
             const showModal = (modal) => {
                 modal.style.display = 'flex';
             };
@@ -254,7 +269,6 @@
                 modal.style.display = 'none';
             };
 
-            // Renderizar la lista de clientes
             const renderClients = () => {
                 clientsContainerEl.innerHTML = '';
                 clientData.forEach(client => {
@@ -287,37 +301,41 @@
                         </div>
                     `;
                     const jobListEl = clientCard.querySelector('.job-list');
-                    client.jobs.forEach(job => {
-                        const jobItem = document.createElement('li');
-                        jobItem.className = 'p-1 rounded-xl flex justify-between items-center text-sm bg-green-100';
-                        jobItem.innerHTML = `
-                            <p class="font-medium">${job.name}</p>
-                            <p class="text-gray-600">B/.${parseFloat(job.cost).toFixed(2)}</p>
-                            <div class="flex space-x-2 items-center">
-                                <p class="text-gray-500">${job.date}</p>
-                                <button class="delete-job-btn text-red-500 hover:text-red-700 text-xs font-bold" data-client-id="${client.id}" data-job-id="${job.id}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                            </div>
-                        `;
-                        jobListEl.appendChild(jobItem);
-                    });
+                    if (client.jobs) {
+                        client.jobs.forEach((job, index) => {
+                            const jobItem = document.createElement('li');
+                            jobItem.className = 'p-1 rounded-xl flex justify-between items-center text-sm bg-green-100';
+                            jobItem.innerHTML = `
+                                <p class="font-medium">${job.name}</p>
+                                <p class="text-gray-600">B/.${parseFloat(job.cost).toFixed(2)}</p>
+                                <div class="flex space-x-2 items-center">
+                                    <p class="text-gray-500">${job.date}</p>
+                                    <button class="delete-job-btn text-red-500 hover:text-red-700 text-xs font-bold" data-client-id="${client.id}" data-job-index="${index}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            `;
+                            jobListEl.appendChild(jobItem);
+                        });
+                    }
 
                     const paymentListEl = clientCard.querySelector('.payment-list');
-                    client.payments.forEach(payment => {
-                        const paymentItem = document.createElement('li');
-                        paymentItem.className = 'p-1 rounded-xl flex justify-between items-center text-sm bg-blue-100';
-                        paymentItem.innerHTML = `
-                            <p class="font-medium">Abono</p>
-                            <p class="text-gray-600">B/.${parseFloat(payment.amount).toFixed(2)}</p>
-                            <div class="flex space-x-2 items-center">
-                                <p class="text-gray-500">${payment.date}</p>
-                            </div>
-                        `;
-                        paymentListEl.appendChild(paymentItem);
-                    });
+                    if (client.payments) {
+                        client.payments.forEach(payment => {
+                            const paymentItem = document.createElement('li');
+                            paymentItem.className = 'p-1 rounded-xl flex justify-between items-center text-sm bg-blue-100';
+                            paymentItem.innerHTML = `
+                                <p class="font-medium">Abono</p>
+                                <p class="text-gray-600">B/.${parseFloat(payment.amount).toFixed(2)}</p>
+                                <div class="flex space-x-2 items-center">
+                                    <p class="text-gray-500">${payment.date}</p>
+                                </div>
+                            `;
+                            paymentListEl.appendChild(paymentItem);
+                        });
+                    }
                     clientsContainerEl.appendChild(clientCard);
                 });
             };
@@ -326,7 +344,7 @@
             clientsContainerEl.addEventListener('click', (e) => {
                 // Agregar trabajo
                 if (e.target.classList.contains('add-job-btn')) {
-                    currentClientId = e.target.dataset.id;
+                    currentClientId = parseInt(e.target.dataset.id);
                     jobNameInput.value = '';
                     jobCostInput.value = '';
                     jobDateInput.value = new Date().toISOString().slice(0, 10);
@@ -334,7 +352,7 @@
                 }
                 // Registrar abono
                 if (e.target.classList.contains('add-payment-btn')) {
-                    currentClientId = e.target.dataset.clientId;
+                    currentClientId = parseInt(e.target.dataset.clientId);
                     const client = clientData.find(c => c.id === currentClientId);
                     paymentClientName.textContent = `Abono para: ${client.name}`;
                     paymentAmountInput.value = '';
@@ -342,37 +360,34 @@
                 }
                 // Eliminar trabajo
                 if (e.target.classList.contains('delete-job-btn')) {
-                    const clientId = e.target.dataset.clientId;
-                    const jobId = e.target.dataset.jobId;
-                    const clientIndex = clientData.findIndex(c => c.id === clientId);
-                    if (clientIndex !== -1) {
-                         const jobIndex = clientData[clientIndex].jobs.findIndex(j => j.id === jobId);
-                         if (jobIndex !== -1) {
-                            clientData[clientIndex].jobs.splice(jobIndex, 1);
-                            saveClientData();
-                            showMessage('Trabajo eliminado.');
-                         }
+                    const clientId = parseInt(e.target.dataset.clientId);
+                    const jobIndex = parseInt(e.target.dataset.jobIndex);
+                    const client = clientData.find(c => c.id === clientId);
+                    if (client && client.jobs && client.jobs.length > jobIndex) {
+                        client.jobs.splice(jobIndex, 1);
+                        saveClientData();
+                        showMessage('Trabajo eliminado.');
                     }
                 }
                 // Compartir
                 if (e.target.classList.contains('share-btn')) {
-                    const clientId = e.target.dataset.clientId;
+                    const clientId = parseInt(e.target.dataset.clientId);
                     const client = clientData.find(c => c.id === clientId);
 
-                    const totalJobCost = client.jobs.reduce((sum, job) => sum + parseFloat(job.cost), 0);
-                    const totalPaid = client.payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+                    const totalJobCost = (client.jobs || []).reduce((sum, job) => sum + parseFloat(job.cost), 0);
+                    const totalPaid = (client.payments || []).reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
                     const clientBalance = totalJobCost - totalPaid;
 
                     let message = `Historial de ${client.name}\n\n`;
 
                     message += `*Trabajos:*\n`;
-                    client.jobs.forEach(job => {
+                    (client.jobs || []).forEach(job => {
                         message += `- ${job.name}: B/.${parseFloat(job.cost).toFixed(2)} el ${job.date}\n`;
                     });
 
                     message += `\n*Abonos:*\n`;
-                    if (client.payments.length > 0) {
-                        client.payments.forEach(payment => {
+                    if (client.payments && client.payments.length > 0) {
+                        (client.payments || []).forEach(payment => {
                             message += `- Abono de B/.${parseFloat(payment.amount).toFixed(2)} el ${payment.date}\n`;
                         });
                     } else {
@@ -404,12 +419,13 @@
             saveClientBtn.addEventListener('click', () => {
                 const name = clientNameInput.value.trim();
                 if (name) {
-                    clientData.push({
-                        id: Date.now().toString(),
+                    const newClient = {
+                        id: Date.now(),
                         name: name,
                         jobs: [],
                         payments: []
-                    });
+                    };
+                    clientData.push(newClient);
                     saveClientData();
                     hideModal(addClientModal);
                     showMessage('Cliente agregado.');
@@ -424,17 +440,14 @@
                 const name = jobNameInput.value.trim();
                 const cost = parseFloat(jobCostInput.value);
                 const date = jobDateInput.value;
-                if (name && !isNaN(cost) && cost > 0 && date) {
+                if (name && !isNaN(cost) && cost > 0 && date && currentClientId) {
                     const client = clientData.find(c => c.id === currentClientId);
-                    client.jobs.push({
-                        id: Date.now().toString(),
-                        name: name,
-                        cost: cost,
-                        date: date
-                    });
-                    saveClientData();
-                    hideModal(addJobModal);
-                    showMessage('Trabajo agregado.');
+                    if (client) {
+                        client.jobs.push({ name, cost, date });
+                        saveClientData();
+                        hideModal(addJobModal);
+                        showMessage('Trabajo agregado.');
+                    }
                 }
             });
 
@@ -444,15 +457,14 @@
 
             savePaymentBtn.addEventListener('click', () => {
                 const amount = parseFloat(paymentAmountInput.value);
-                if (!isNaN(amount) && amount > 0) {
+                if (!isNaN(amount) && amount > 0 && currentClientId) {
                     const client = clientData.find(c => c.id === currentClientId);
-                    client.payments.push({
-                        amount: amount,
-                        date: new Date().toISOString().slice(0, 10)
-                    });
-                    saveClientData();
-                    hideModal(addPaymentModal);
-                    showMessage('Abono registrado.');
+                    if (client) {
+                        client.payments.push({ amount, date: new Date().toISOString().slice(0, 10) });
+                        saveClientData();
+                        hideModal(addPaymentModal);
+                        showMessage('Abono registrado.');
+                    }
                 }
             });
 
@@ -467,7 +479,7 @@
                     reader.onload = (e) => {
                         try {
                             const restoredData = JSON.parse(e.target.result);
-                            if (Array.isArray(restoredData) && restoredData.every(c => c.name && c.jobs)) {
+                            if (Array.isArray(restoredData)) {
                                 clientData = restoredData;
                                 saveClientData();
                                 hideModal(restoreModal);
@@ -519,7 +531,6 @@
                 restoreFileInput.value = null;
                 showModal(restoreModal);
             });
-
 
             // Inicialización
             renderClients();
